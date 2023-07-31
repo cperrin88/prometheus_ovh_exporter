@@ -22,9 +22,11 @@ import (
 )
 
 type Metrics struct {
-	cloudProjectUsageStorageIncomingBandwidth *prometheus.GaugeVec
-	cloudProjectUsageStorageOutgoingBandwidth *prometheus.GaugeVec
-	cloudProjectUsageStorageStored            *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingBandwidth         *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingInternalBandwidth *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingBandwidth         *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingInternalBandwidth *prometheus.GaugeVec
+	cloudProjectUsageStorageStored                    *prometheus.GaugeVec
 }
 
 type CloudProject struct {
@@ -96,7 +98,15 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 				Namespace: namespace,
 				Subsystem: "cloud_project_usage",
 				Name:      "storage_incoming_bw",
-				Help:      "Incoming Bandwidth for OVH Cloud Project storage",
+				Help:      "Incoming bandwidth for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
+		cloudProjectUsageStorageIncomingInternalBandwidth: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_incoming_internal_bw",
+				Help:      "Incoming internal bandwidth for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
 		cloudProjectUsageStorageOutgoingBandwidth: prometheus.NewGaugeVec(
@@ -104,7 +114,15 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 				Namespace: namespace,
 				Subsystem: "cloud_project_usage",
 				Name:      "storage_outgoing_bw",
-				Help:      "Incoming Bandwidth for OVH Cloud Project storage",
+				Help:      "Outgoing bandwidth for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
+		cloudProjectUsageStorageOutgoingInternalBandwidth: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_outgoing_internal_bw",
+				Help:      "Outgoing internal bandwidth for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
 		cloudProjectUsageStorageStored: prometheus.NewGaugeVec(
@@ -117,7 +135,9 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 		),
 	}
 	reg.MustRegister(m.cloudProjectUsageStorageIncomingBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageIncomingInternalBandwidth)
 	reg.MustRegister(m.cloudProjectUsageStorageOutgoingBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageOutgoingInternalBandwidth)
 	reg.MustRegister(m.cloudProjectUsageStorageStored)
 	return m
 }
@@ -157,9 +177,15 @@ func RecordCloudProjectMetrics(client *ovh.Client, metrics *Metrics, cloudProjec
 			metrics.cloudProjectUsageStorageIncomingBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.IncomingBandwidth.Quantity)))
+			metrics.cloudProjectUsageStorageIncomingInternalBandwidth.
+				With(labels).
+				Set(float64(RealQuantity(&storage.IncomingInternalBandwidth.Quantity)))
 			metrics.cloudProjectUsageStorageOutgoingBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.OutgoingBandwidth.Quantity)))
+			metrics.cloudProjectUsageStorageOutgoingInternalBandwidth.
+				With(labels).
+				Set(float64(RealQuantity(&storage.OutgoingInternalBandwidth.Quantity)))
 			metrics.cloudProjectUsageStorageStored.
 				With(labels).
 				Set(float64(RealQuantity(&storage.Stored.Quantity)))
