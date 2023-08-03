@@ -22,11 +22,16 @@ import (
 )
 
 type Metrics struct {
-	cloudProjectUsageStorageIncomingBandwidth         *prometheus.GaugeVec
-	cloudProjectUsageStorageIncomingInternalBandwidth *prometheus.GaugeVec
-	cloudProjectUsageStorageOutgoingBandwidth         *prometheus.GaugeVec
-	cloudProjectUsageStorageOutgoingInternalBandwidth *prometheus.GaugeVec
-	cloudProjectUsageStorageStored                    *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingBandwidth             *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingBandwidthCost         *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingInternalBandwidth     *prometheus.GaugeVec
+	cloudProjectUsageStorageIncomingInternalBandwidthCost *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingBandwidth             *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingBandwidthCost         *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingInternalBandwidth     *prometheus.GaugeVec
+	cloudProjectUsageStorageOutgoingInternalBandwidthCost *prometheus.GaugeVec
+	cloudProjectUsageStorageStored                        *prometheus.GaugeVec
+	cloudProjectUsageStorageStoredCost                    *prometheus.GaugeVec
 }
 
 type CloudProject struct {
@@ -101,12 +106,28 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 				Help:      "Incoming bandwidth for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
+		cloudProjectUsageStorageIncomingBandwidthCost: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_incoming_bw_cost",
+				Help:      "Incoming bandwidth cost for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
 		cloudProjectUsageStorageIncomingInternalBandwidth: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Subsystem: "cloud_project_usage",
 				Name:      "storage_incoming_internal_bw",
 				Help:      "Incoming internal bandwidth for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
+		cloudProjectUsageStorageIncomingInternalBandwidthCost: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_incoming_internal_bw_cost",
+				Help:      "Incoming internal bandwidth cost for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
 		cloudProjectUsageStorageOutgoingBandwidth: prometheus.NewGaugeVec(
@@ -117,6 +138,14 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 				Help:      "Outgoing bandwidth for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
+		cloudProjectUsageStorageOutgoingBandwidthCost: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_outgoing_bw_cost",
+				Help:      "Outgoing bandwidth cost for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
 		cloudProjectUsageStorageOutgoingInternalBandwidth: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -125,20 +154,41 @@ func NewMetrics(reg prometheus.Registerer, namespace string) *Metrics {
 				Help:      "Outgoing internal bandwidth for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
+		cloudProjectUsageStorageOutgoingInternalBandwidthCost: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_outgoing_internal_bw_cost",
+				Help:      "Outgoing internal bandwidth cost for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
 		cloudProjectUsageStorageStored: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
 				Subsystem: "cloud_project_usage",
 				Name:      "storage_stored",
-				Help:      "Stored Data for OVH Cloud Project storage",
+				Help:      "Stored data for OVH Cloud Project storage",
+			}, []string{"project_name", "bucket_name", "region", "type"},
+		),
+		cloudProjectUsageStorageStoredCost: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Namespace: namespace,
+				Subsystem: "cloud_project_usage",
+				Name:      "storage_stored_cost",
+				Help:      "Stored data cost for OVH Cloud Project storage",
 			}, []string{"project_name", "bucket_name", "region", "type"},
 		),
 	}
 	reg.MustRegister(m.cloudProjectUsageStorageIncomingBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageIncomingBandwidthCost)
 	reg.MustRegister(m.cloudProjectUsageStorageIncomingInternalBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageIncomingInternalBandwidthCost)
 	reg.MustRegister(m.cloudProjectUsageStorageOutgoingBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageOutgoingBandwidthCost)
 	reg.MustRegister(m.cloudProjectUsageStorageOutgoingInternalBandwidth)
+	reg.MustRegister(m.cloudProjectUsageStorageOutgoingInternalBandwidthCost)
 	reg.MustRegister(m.cloudProjectUsageStorageStored)
+	reg.MustRegister(m.cloudProjectUsageStorageStoredCost)
 	return m
 }
 
@@ -177,18 +227,42 @@ func RecordCloudProjectMetrics(client *ovh.Client, metrics *Metrics, cloudProjec
 			metrics.cloudProjectUsageStorageIncomingBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.IncomingBandwidth.Quantity)))
+
+			metrics.cloudProjectUsageStorageIncomingBandwidthCost.
+				With(labels).
+				Set(storage.IncomingBandwidth.TotalPrice)
+
 			metrics.cloudProjectUsageStorageIncomingInternalBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.IncomingInternalBandwidth.Quantity)))
+
+			metrics.cloudProjectUsageStorageIncomingInternalBandwidthCost.
+				With(labels).
+				Set(storage.IncomingInternalBandwidth.TotalPrice)
+
 			metrics.cloudProjectUsageStorageOutgoingBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.OutgoingBandwidth.Quantity)))
+
+			metrics.cloudProjectUsageStorageOutgoingBandwidthCost.
+				With(labels).
+				Set(storage.OutgoingBandwidth.TotalPrice)
+
 			metrics.cloudProjectUsageStorageOutgoingInternalBandwidth.
 				With(labels).
 				Set(float64(RealQuantity(&storage.OutgoingInternalBandwidth.Quantity)))
+
+			metrics.cloudProjectUsageStorageOutgoingInternalBandwidthCost.
+				With(labels).
+				Set(storage.OutgoingInternalBandwidth.TotalPrice)
+
 			metrics.cloudProjectUsageStorageStored.
 				With(labels).
 				Set(float64(RealQuantity(&storage.Stored.Quantity)))
+
+			metrics.cloudProjectUsageStorageStoredCost.
+				With(labels).
+				Set(storage.Stored.TotalPrice)
 		}
 
 	}
